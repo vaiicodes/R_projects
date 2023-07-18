@@ -1,0 +1,877 @@
+---
+title: "Tuberculosis US Report: Proposal for a new vaccine"
+author: "Saleh Sarwar and Vaidehi Ponkshe"
+date: "2023-06-28"
+output: html_document
+---
+
+
+Matriculation Number
+- Saleh Sarwar: 22210364
+- Vaidehi Ponkshe: 22201071
+
+Email
+- muhammad.sarwar@stud.th-deg.de
+- vaidehi.ponkshe@stud.th-deg.de
+
+# Introduction
+
+Tuberculosis (TB) is one of the world’s leading infectious disease killers. According to World Health Organisation (WHO), TB was responsible for death of total 1.6 million people in 2021. And an estimated 10.6 million people fell ill worldwide. It is an infectious disease that most often affects the lungs and is caused by a type of bacteria. It spreads through the air when infected people cough, sneeze or spit.
+This report is generated to understand and analyse the trends in TB infections across the US and proposal for developing a new vaccine to combat the current TB crisis 
+
+# Problem Definition 
+
+The vaccine for TB has been developed in 1928 but still the war against TB hasn’t been won. Instead, drug resistance is a growing problem that can further exacerbate the situation. It is important to understand the reasons behind the persistence of TB. This report aims to establish a case to develop a new vaccine by analyzing various aspects of TB including seasonality analysis, long term trend analysis, demographic analysis and drug resistance analysis.
+
+# Objectives 
+
+-	To perform long term trend analysis on both country as well as state level of   US.
+-	To perform demographic analysis 
+-	To perform drug resistance analysis
+
+# Methods
+
+- Methods from descriptive statistics: Descriptive Statistics
+- Statistics for scientific work: Literate Statistical Analysis
+- Advanced-Data visualization techniques: ggplot2, gganimate, highcharter
+
+
+
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(ggthemes)
+library(knitr)
+library(gganimate)
+library(kableExtra)
+library(highcharter)
+library(viridis)
+library(DT)
+```
+# Data for the analysis
+The data used to carry out this analysis is mainly taken from Online [Tuberculosis Information System](https://wonder.cdc.gov/TB-v2021.html) (also known as "CDC Wonder") on the Centers for Disease Control and Prevention . Additionally, [Project Tycho](https://healthdata.gov/dataset/Project-Tycho-Level-2-Data/8ihh-ztee/data) data was used for seasonality analysis. 
+
+The datasets have been loaded below to carry out the analysis.
+<details>
+  <summary> Show Code </summary>
+```{r}
+# Import all datasets used in the report
+
+# Data for long term trend
+df_cases_US <- read.csv("tb/tb_cases_inci_rate_1953_2021.csv")
+
+# Data for seasonality analysis
+df_seasonlity <- read.csv("ProjectTycho_Level2_v1.1.0.csv")
+
+# Data for state longterm analysis
+df_state <- read.delim("tb/OTIS TB Data 1993-2021.txt", sep = "\t")
+
+# Data for gender analysis
+df_gender <- read.delim("tb/TB_gender_1993_2021.txt", sep = "\t")
+
+# Data for race/ethnicity related analysis
+df_tb_race <- read.delim("tb/TB_US_race_1993-2021.txt", sep = "\t")
+
+# Data for age group analysis
+df_age <- read.csv("tb/TB_age_group_1993-2021.csv")
+
+
+# Data for drug resistance analysis
+df_drug_resi <- read.csv("tb/TB_drug_resistance_US.csv")
+
+```
+
+</details>
+
+# Seasonality analysis
+
+Seasonality Analysis is carried out to understand the trend of seasonal variation and disease transmission which can be used to develop targeted treatment strategies. 
+
+The data for seasonality analysis is given in the table below
+<details>
+ <summary> Show Code </summary>
+```{r}
+dt_seasonlity <- datatable(df_seasonlity %>% head())
+```
+</details>
+
+```{r, echo=FALSE}
+dt_seasonlity 
+```
+
+The data requires preprocessing of generating the year and month columns, converting the columns to right data type and then subsetting the data for tuberculosis is performed as can be seen in the code below (Press Show Code).
+
+<details>
+  <summary> Show Code </summary>
+```{r}
+# Separating the year and week columns
+year <-as.character(df_seasonlity$epi_week)
+year <- substr(year, 1, 4)
+df_seasonlity$year <- as.integer(year)
+week <- as.character(df_seasonlity$epi_week)
+week <- substr(week, 5, 6)
+df_seasonlity$week <- as.integer(week)
+
+# Convert the column type to integer
+df_seasonlity$month <- as.integer(format(as.Date(df_seasonlity$from_date), "%m"))
+
+# Subsetting data for tuberculosis
+df_state_tuberculosis <- df_seasonlity %>%
+  filter(disease == "TUBERCULOSIS [PHTHISIS PULMONALIS]" & loc_type == "STATE") %>%
+  select(year, month, week, loc, disease, event, number, from_date, to_date)
+```
+</details>
+
+To visualize the data for this analysis Line Graph is used. Line graphs are usually used to represent changes over time. 
+
+<details>
+  <summary> Show Code </summary>
+```{r}
+# Make a line chart for seasonlity analysis
+line_chart_seasonlity <- df_state_tuberculosis %>%
+  select(month, number) %>%
+  group_by(month) %>%
+  summarise(month_mean = mean(number)) %>%
+  ggplot(aes(month, month_mean)) +
+  geom_line(color = "gold", linewidth=1) +
+  scale_x_continuous(breaks = seq(1,12, 1)) +
+  ylim(10,18) +
+  theme(title = element_text(size = 8),
+        plot.title = element_text(face = "bold")) +
+  labs(x = "Month",
+      y = "Mean cases per month",
+      title = "Seasonlity analysis of Tuberculosis in US") +
+  theme_hc()
+```
+</details>
+
+```{r, echo=FALSE}
+line_chart_seasonlity
+```
+
+**Observations**
+
+- A peak is observed around the 6th month indicating that Tuberculosis is a seasonal disease with maximum infections developing in June (Summer).
+
+**Insights**
+
+- Seasonality of tuberculosis disease may indicate the presence of season-specific risk factors that could potentially be controlled if they were better understood. 
+ 
+# Long-term Trend analysis: {.tabset}
+
+The overall trend of a disease through out the years can tell a story about how the disease has emerged/declined and the impact of human interventions on it.For this reason, Long-term trend analysis for Tuberculosis from 1953-2021 was performed for incidence and mortality rate.
+
+The dataset used for the analysis is in the table below.
+<details>
+  <summary> Show code </summary>
+```{r}
+# Display the table 
+
+dt_cases_us <- df_cases_US %>%
+  datatable()
+```
+</details>
+```{r, echo=FALSE}
+dt_cases_us
+```
+
+The data was processed in order to identify the incomplete, irrelevant, or missing parts of the data and then modified according to the necessity (click on "Show Code" to check the data cleaning and subsetting steps).
+
+<details>
+  <summary>Show code</summary>
+
+```{r}
+# Data cleaning and subseting
+
+df_lta_cases_deaths <- df_cases_US %>%
+  select(Year, No.Cases, No.Deaths)
+
+names(df_lta_cases_deaths) <- c("year", "number_of_cases", "number_of_deaths")
+
+df_lta_cases_deaths$number_of_cases <-  as.numeric(gsub(",", "", df_lta_cases_deaths$number_of_cases))
+
+# The unavailable data is shown as "--" replacing it with NA to perform analysis later
+df_lta_cases_deaths$number_of_deaths <- replace(df_lta_cases_deaths$number_of_deaths, df_lta_cases_deaths$number_of_deaths == "––", NA)
+
+df_lta_cases_deaths$number_of_deaths <- as.numeric(gsub(",", "", df_lta_cases_deaths$number_of_deaths))
+
+df_lta_inci <- df_cases_US %>%
+  select(Year, Cases.Rate, Deaths.rate)
+
+names(df_lta_inci) <- c("year", "cases_incidence_rate", "deaths_incidence_rate")
+
+df_lta_inci$deaths_incidence_rate <- as.numeric(replace(df_lta_inci$deaths_incidence_rate,                                              df_lta_inci$deaths_incidence_rate == "––", NA))
+
+```
+</details>
+
+Next step is to visualize the data for long term trend analysis with the following graphs.
+
+A)	Bar Graph - A bar chart is used when you want to show a distribution of data points or perform a comparison of metric values across different subgroups of your data.
+
+(Note: Click on the "Show code" to see the code)
+<details>
+  <summary>Show code</summary>
+
+```{r, warning=FALSE}
+
+# Bar chart for long term analysis
+cases_deaths_bar_chart <- df_lta_cases_deaths %>%
+  pivot_longer(!year, names_to = "cases_death", values_to = "count" ) %>%
+  ggplot(aes(year, count, fill = cases_death)) +
+  geom_bar(stat = "identity") +
+  facet_grid(cases_death ~ ., scale = "free_y") +
+  scale_x_continuous(breaks = seq(min(df_lta_cases_deaths$year), max(df_lta_cases_deaths$year), 10)) +
+  theme_hc() +
+  scale_fill_manual(values = c("number_of_cases" = "grey", "number_of_deaths" = "gold"),
+                    labels = c("number_of_cases" = "Cases", "number_of_deaths" = "Deaths")) +
+  labs(fill = "Metric",
+       y = "Total per year") +
+  ggtitle("Comparison of total cases and deaths of Tuberculosis in US (1993-2021)") +
+  theme(title = element_text(size = 8),
+        plot.title = element_text(face = "bold"),
+        strip.text = element_blank())
+
+```
+</details>
+
+B)  Line Graph – Line graphs are usually used to represent changes over time.
+
+<details>
+  <summary>Show code</summary>
+```{r}
+# Draw line chart for comparision of cases and deaths rate.
+cases_deaths_rate_line_chart <- df_lta_inci %>%
+  pivot_longer(!year, names_to = "cases_deaths", values_to = "rates") %>%
+  ggplot(aes(year, rates, color = cases_deaths)) +
+  geom_line(size = 1) +
+  theme_hc() +
+  facet_grid(cases_deaths ~ ., scale = "free_y")  +
+  scale_color_manual(values = c("cases_incidence_rate" = "grey", "deaths_incidence_rate" = "gold"),
+                     labels = c("cases_incidence_rate" = "Incidence rate ",
+                                "deaths_incidence_rate" = "Mortality rate")) +
+  labs(color = "Metric",
+       y = "Cases/Deaths per 100000 persons") +
+  ggtitle("Comparison of incidence and mortality rate of Tuberculosis in US (1993-2021)") +
+  theme(strip.text = element_blank(),
+        title = element_text(size =8),
+        plot.title = element_text(face = "bold")) 
+```
+
+</details>
+
+## Bar chart for long term trend:
+```{r, echo =FALSE, warning=FALSE, fig.width=8}
+cases_deaths_bar_chart
+```
+
+**Observations**
+
+- There is a sharp decrease in number of deaths as compared to the number of cases. 
+- Number of deaths reduced massively but the mortality rate still persists,albeit at a reduced level.
+
+
+## Line chart for long term trend
+```{r, echo = FALSE, fig.width= 8, warning= FALSE}
+cases_deaths_rate_line_chart
+```
+
+**Observations**
+
+- There is a decrease in both incidence rate and mortality rate over time.     - A short peak is observed in the incidence rate around 1970s. 
+
+# {-}
+
+
+**Insights** 
+
+- Sharp decrease in number of deaths indicates a development of treatment for the disease around 1950s.
+-A short peak in incidence rate around 1970s indicates the first outbreak of drug-resistant TB in the US.
+- Decline in the incidence rate suggests a development of a vaccine which is Bacille Calmette-Guérin (BCG) developed in 1921. Since the decrease is not sharp, the efficacy of BCG vaccine could be low.
+
+## State long term analysis: {.tabset}
+
+State level long term incidence rate analysis tells a story about whether a disease is affected by the demographic factor since States usually have different demographics. The idea is that incidence rate would remain constant if the factors do not affect the disease. 
+
+To carry out the analysis a series of interactive maps are generated using the Highcharter library in R. Five maps were generated for the years 1993, 2000, 2007, 2014 and 2021 to get an overview. These maps represent the incidence rate of TB cases in different US states. Severity of infections is indicated by the different colours. The map allows the user to explore and compare TB case counts across different states and years.
+
+<details>
+  <summary> Show Code </summary>
+```{r}
+# exlude 2021 as no death rate there
+df_state_rate <- df_state %>%
+  filter(Year != 2021)
+
+# Convert the Rate.per.100.000 to numeric 
+df_state_rate$Rate.per.100.000 <- as.numeric(df_state_rate$Rate.per.100.000)
+
+n <- 4
+rate_max <- max(df_state_rate$Rate.per.100.000, na.rm = TRUE)
+
+# generating specific color pallet
+colstops <- data.frame(q = seq(0, rate_max, length.out = n + 1) / rate_max,
+                       c = substring(viridis(n + 1, option = "B"), 0, 7)) %>%
+  list_parse2()
+
+
+plot_list_rate <- list()
+
+
+# Iterate over each year
+for (year in unique(df_state_rate$Year)) {
+  # Filter the data for the current year
+  data_year <- df_state_rate[df_state_rate$Year == year, ]
+  
+  # Create the plot for the current year
+  plot <- highchart() %>%
+    hc_title(text = paste("Tuberculosis rates in US - Year:", year)) %>%
+    hc_add_series_map(usgeojson, data_year, name = "Rates by State",
+                      value = "Rate.per.100.000", joinBy = c("woename", "State")) %>%
+    hc_colorAxis(stops = colstops) %>%
+    hc_legend(valueDecimals = 0)  %>% 
+    hc_add_theme(hc_theme_ggplot2())
+  
+  # Add the plot to the list
+  plot_list_rate[[as.character(year)]] <- plot
+}
+
+```
+</details>
+
+### 1993
+```{r}
+plot_list_rate[["1993"]]
+```
+
+### 2000
+```{r}
+plot_list_rate[["2000"]]
+```
+
+### 2007
+```{r}
+plot_list_rate[["2007"]]
+```
+
+### 2014
+```{r}
+plot_list_rate[["2014"]]
+```
+
+### 2020
+```{r}
+plot_list_rate[["2020"]]
+```
+
+# {-}
+
+**Observations** 
+
+-Throughout these years, seven states consistently exhibited the highest TB rates.
+-The incidence rate for these 7 states in 2020 is shown below from highest to lowest.
+
+•	Alaska – 7.93
+•	Hawaii – 6.54
+•	California – 4.33
+•	New York – 3.3
+•	Texas - 3
+•	New Jersey – 2.76
+•	Maryland – 2.44
+
+
+Detailed visualization of the incidence rate of States throughout the years can be depicted through time series animation. ggplot and gganimate was used to create such an animation.
+
+```{r, echo=FALSE, out.width='800px'}
+knitr::include_graphics("tb_rate_animation.gif")
+```
+
+**Observations**
+
+- There is a visible decrease in incidence rates from the year 1993 to 2021 as confirmed by previous graph in long term trend analysis. 
+
+**Insights**
+
+- Incidence rate is different across states suggesting that demographics might influence the prevalence of TB. Demographic analysis needs to be performed in order to explore this proposition. 
+
+# Demographic Analysis:
+
+Demographic analysis can describe and explain the distribution of TB infections in US population and help with identifying risk factors and assess vulnerable populations. The following demographic analysis were performed within this study.
+
+•	Gender Analysis
+•	Age Specific Analysis 
+•	Race/Ethnicity Analysis
+
+
+## Gender analysis: {.tabset}
+
+Gender Analysis focuses to understand gender-based differences and thus help in development of targeted treatment strategies. The data used to carry out gender analysis for Tuberculosis in the US from 1993-2021 is given in the table below.
+
+<details>
+  <summary> Show Code </summary>
+```{r}
+# View the data
+dt_gender <- datatable(df_gender)
+```
+</details>
+```{r, echo=FALSE}
+dt_gender
+```
+
+The data had some NAs at the end which was removed and also subsetting was performed.
+
+<details>
+  <summary> Show Code </summary>
+```{r}
+# subset the relevant column for the analysis
+df_gender <- df_gender %>%
+  select(Year, Sex, Cases)
+
+# omit the empty rows at the end
+df_gender <- na.omit(df_gender)
+```
+</details>
+
+Next, to visualize the data for gender analysis following graphs are used.
+
+A) Stacked bar graphs are used to compare numeric values across two categorical variables. Each bar in a standard bar chart is divided into a number of sub-bars stacked end to end, each one corresponding to a level of the second categorical variable.
+
+
+<details>
+  <summary> Show Code </summary>
+```{r}
+stacked_bar_chart_gender <- df_gender %>%
+  ggplot(aes(Year, Cases, fill = Sex)) +
+  geom_bar(stat = "identity") +
+  theme_hc()  +
+  scale_fill_manual(values = c("grey", "gold", "red")) +
+  scale_x_continuous(breaks = seq(min(df_gender$Year), max(df_gender$Year), 5)) +
+  labs(y = "Number of Cases",
+       x = "",
+       title = "Comparison of cases by gender for Tuberculosis in US(1993-2021)") +
+  theme(title = element_text(size =10),
+        plot.title = element_text(face = "bold"))
+
+```
+</details>
+
+
+B) Line Graph - For this the data was converted to wide format and percentage of total males and females cases were calculated.
+
+<details>
+  <summary> Show Code </summary>
+```{r}
+# Convert the data to wider for calculating the percentages
+df_gender_wide <- df_gender %>%
+  select(Year, Sex, Cases) %>%
+  pivot_wider(names_from = "Sex", values_from = "Cases") 
+
+# Include the total cases column for calculating the percentages
+filtered_US_cases <- df_cases_US %>%
+  filter(Year >= 1993)
+
+# Including the column and correcting its type
+df_gender_wide$total_cases <- filtered_US_cases$No.Cases
+df_gender_wide$total_cases <- as.numeric(gsub(",", "",
+                                               df_gender_wide$total_cases))
+
+# caluclating percentage of female and male and including it in a column
+df_gender_wide <- df_gender_wide %>%
+  mutate(percentage_of_female = Female/total_cases * 100, percentage_of_male = Male/total_cases * 100) 
+
+
+line_chart_gender <- df_gender_wide %>%
+  ggplot(aes(Year)) +
+  geom_line(aes(y = percentage_of_female, color = "Female"), linewidth = 1.2) +
+  geom_line(aes(y = percentage_of_male, color = "Male"), linewidth = 1.2) +
+  scale_x_continuous(breaks = seq(min(df_gender_wide$Year), max(df_gender_wide$Year), 5)) +
+  ylim(0,80) +
+  theme_hc() +
+  scale_color_manual(values = c("Female" = "grey", "Male" = "gold")) +
+  labs(color = "Sex",
+       x = "",
+       y = "Percentage (%)",
+       title = "Comparison of percentage of male and female cases of Tuberculosis in US (1993-2021") +
+  theme(title = element_text(size =9, face = "bold"))
+```
+</details>
+
+
+### Stacked bar chart for gender
+```{r, echo=FALSE}
+stacked_bar_chart_gender
+```
+
+**Observations**
+
+- The number of cases for both males and females decreases over the years.
+- Males seem to be affected more than females.
+
+
+### Line chart for gender
+```{r, echo=FALSE}
+line_chart_gender
+```
+
+**Observations**
+
+- Males have higher percentage (60%) of TB infections than females.
+- The same trend has been continued from 1993 to 2021.
+
+# {-}
+
+**Insights** 
+
+- Tuberculosis affects men and women differently. One of the studies showed smaller B cell follicles in males exhibiting greater susceptibility to TB, and point to a putative role for IL-23 in these dimorphisms.  
+- Thus, there is a need for the development of individualized vaccination approaches, which will be critical to protect both sexes against Mtb infection in the future.
+
+
+ 
+## Age group Analysis: {.tabset}
+
+Age group analysis helps to understand the disease susceptibility across different age groups and to identify the vulnerable populations. The data used to carry out this analysis is given in the table below.
+
+<details>
+  <summary> Show Code </summary>
+
+```{r}
+df_age_rate <- df_age %>%
+  select(Year,starts_with("Rate"))
+
+names(df_age_rate) <- c("year","0-4", "5-14", "15-24", "25-44", "45-64", ">64")
+dt_age_rate <- datatable(df_age_rate)
+```
+</details>
+
+```{r, echo=FALSE}
+dt_age_rate
+```
+Line graphs for over the years rate and percentage is used to visualize the age group. The data was also preprocessed accordingly 
+<details>
+  <summary> Show Code </summary>
+```{r}
+# intuitive name for the columns
+age_group <- c("0-4", "5-14", "15-24", "25-44", "45-64", ">64")
+
+# convert the data to long
+df_age_rate_long <- df_age_rate %>%
+  pivot_longer(cols = all_of(age_group),
+               names_to = "age_group",
+               values_to = "count")
+
+df_age_rate_long$age_group <- factor(df_age_rate_long$age_group, levels = age_group)
+
+line_chart_age_rate <-  ggplot(df_age_rate_long, aes(x = year, y = count, color = age_group)) +
+      geom_line(stat = "identity", linewidth = 1) +
+      scale_x_continuous(breaks = seq(min(df_age$Year), max(df_age$Year), 5)) +
+      labs(x = "", 
+           y = "Incidence rate (per 100000 people)",
+           color = "Age group:",
+           title = "Comparison of incidence rate by age group of Tuberculosis in US (1993-2021):\nRate of Cases per 100,000 Population") +
+      theme_hc() +
+  theme(title = element_text(size =10, face = "bold"))
+
+# Data preprocessing for percentage line graph
+df_age_count <- df_age %>%
+  select(Year, Total_cases, No_0.4, No_5.14, No_15.24, No.25.44, No.45.64, No_.64)
+
+list_col_names <- as.list(colnames(df_age_count))
+for (col in list_col_names){
+  df_age_count[[col]] <- as.numeric(gsub(",", "", df_age_count[[col]]))
+}
+
+names(df_age_count) <- c("year", "total_cases","0-4", "5-14", "15-24", "25-44", "45-64", ">64")
+
+df_age_count$total_cases <- filtered_US_cases$No.Cases
+df_age_count$total_cases <- as.numeric(gsub(",", "",
+                                               df_gender_wide$total_cases))
+df_age_count_percent <- df_age_count %>%
+  mutate(percent_0_4 = `0-4`/total_cases * 100,
+         percent_5_14 = `5-14`/total_cases *100,
+         percent_15_24 = `15-24`/total_cases * 100,
+         percent_25_44 = `25-44`/total_cases * 100,
+         percent_45_64 = `45-64`/total_cases * 100,
+         percent_greater_64 = `>64`/total_cases * 100)
+
+
+line_chart_age_percentage <- df_age_count_percent %>%
+  ggplot(aes(year)) +
+  geom_line(aes(y = percent_0_4, color = "0-4"), linewidth = 1) +
+  geom_line(aes(y = percent_5_14, color = "5-14"), linewidth = 1) +
+  geom_line(aes(y = percent_25_44, color = "25-44"), linewidth = 1) +
+  geom_line(aes(y = percent_45_64, color = "45-64"), linewidth = 1) +
+  geom_line(aes(y = percent_greater_64, color = ">64"), linewidth = 1) +
+  theme_hc() +
+  labs(x = "",
+      y = "Percentage of Total Cases (%)",
+      color = "Age group:",
+    title = "Comparison of Age Groups for Tuberculosis in the US(1993-2021):\nPercentage of Total Cases"
+) +
+  theme(title = element_text(size =10),
+        plot.title = element_text(face = "bold"))
+
+```
+</details>
+
+### Percentage by age group
+```{r, echo=FALSE}
+line_chart_age_percentage
+```
+
+**Observations**
+
+- The majority of infections are caused in the age group greater than 24 years.
+- Infections are less prevalent in younger populations (0-14 years). 
+
+### Rate comparision by age group
+```{r, echo=FALSE}
+line_chart_age_rate
+```
+
+**Observations**
+
+- Incidence rates are higher among adults than among children
+- 65 years of age or older had the highest TB incidence rate throughout the     years.
+
+# {-}
+
+**Insights**
+
+BCG Vaccine is only 37% effective against TB in children younger than 5 years, but does not offer protection to adolescents or adults after close exposure. This could be the reason for adult being more affected by TB.
+
+## Race/Ethinicity analysis: {.tabset}
+
+Race/Ethnicity analysis helps to understand the disease susceptibility across different ethnic groups and to identify the vulnerable populations. The data used to carry out this analysis is given in the table below.
+
+<details>
+  <summary> Show Code </summary>
+```{r, fig.width=8}
+
+# Subset data
+df_tb_race <- df_tb_race %>%
+  select(Year, Bridged.Race...Ethnicity, Cases, Rate.per.100.000)
+
+# set intuitive names
+names(df_tb_race) <- c("year", "races_ethnicity", "cases", "inci_rate_per_100000")
+
+# remove NA
+df_tb_race <- na.omit(df_tb_race)
+
+# Replacing "Not applicable" to NA
+df_tb_race$inci_rate_per_100000 <- replace(df_tb_race$inci_rate_per_100000, df_tb_race$inci_rate_per_100000 == "Not Applicable", NA)
+df_tb_race$inci_rate_per_100000 <- as.numeric(df_tb_race$inci_rate_per_100000)
+
+dt_tb_race <- datatable(df_tb_race)
+```
+</details>
+
+
+```{r, echo=FALSE}
+dt_tb_race
+```
+
+The data for this analysis is visualized through Stacked bar graph and Line graph.
+
+<details>
+  <summary> Show Code </summary>
+```{r, fig.width= 8}
+stacked_bar_chart_races <- df_tb_race %>%
+  ggplot(aes(year, cases, fill = races_ethnicity)) +
+  geom_bar(stat = "identity") +
+  theme_hc()  +
+  scale_x_continuous(breaks = seq(min(df_tb_race$year), max(df_tb_race$year), 5)) +
+  theme(title = element_text(size = 9, face = "bold"),
+        legend.text = element_text(size =  7)) +
+  labs(title = "Comparison of Number of Cases of Tuberculosis for different Races/Ethinicities in US (1993-2021)",
+       y = "Total cases per year",
+       x = "",
+       fill = "Race/Ethinicity")
+```
+
+```{r, fig.width=8}
+line_chart_races_rate <- ggplot(df_tb_race, aes(x = year, y = inci_rate_per_100000, color = races_ethnicity)) +
+      geom_line(stat = "identity", linewidth = 1) +
+      labs(x = "Year", y = "rate per 100000 population") +
+      theme_hc() +
+      scale_x_continuous(breaks = seq(min(df_tb_race$year), max(df_tb_race$year), 5)) +
+      theme(title = element_text(size = 9, face = "bold"),
+            legend.text = element_text(size = 7)) +
+  labs(title = "Comparison of Incidence rate of Tuberculosis for different Races/Ethinicities in US (1993-2021)",
+       y = "Incidence rate (per 100000 people)",
+       x = "",
+       color = "Race/Ethinicity")
+```
+
+</details>
+
+### Stacked bar chart for cases
+```{r, echo=FALSE, fig.width=8}
+stacked_bar_chart_races
+```
+
+**Observations**
+
+- Majority of the population affected by TB are non-whites.
+
+### line chart for rate
+```{r, echo=FALSE,fig.width=8, warning=FALSE}
+line_chart_races_rate
+```
+
+**Observations**
+
+- The incidence rate of Tuberculosis is the maximum in Asian or Pacific Islander population and the least in Whites.
+- Asian is the most TB affected population followed by African Americans.
+
+# {-}
+
+**Insights**
+
+- Socioeconomic factors like literacy, poverty, employment could directly or indirectly increase the risk for TB disease and present barriers to treatment.
+- Tuberculosis seems to be a disease of underprivileged as all of the races except Asians that have high incidence rate also has Median Income lower than the national average. 
+- Also National Assessment of Educational Progress or NAEP for races with high incidence rate except Asians was found to be lower than the national average.
+
+
+# Drug resistance analysis: {.tabset}
+
+Considering the result for the ethnicity analysis, since TB mostly affects educationally under privileged population, drug resistance could be an emerging problem for Tuberculosis treatment. In order to check this, drug resistance analysis is performed.
+
+For visualizing the drug resistance data for the analysis, the required preporcessing and cleaning steps are performed and then stacked bar chart as well as line chart are made.
+
+<details>
+ <summary> Show code </summary>
+```{r}
+# Subset isoniazid resistant data
+df_isoniazid_resi <- df_drug_resi %>%
+  select(year, total_cases, num_INH, perc_INH, prev_TB_num_INH, prev_TB_perc_INH,
+         no_prev_TB_num_INH., no_prev_TB_perc_INH)
+
+# Subset multi drug resistant data
+df_mdr_resi <- df_drug_resi %>%
+  select(year, total_cases, num_MDR, perc_MDR, prev_TB_num_MDR, prev_TB_perc_MDR,
+         no_prev_TB_num_MDR, no_prev_TB_perc_MDR)
+
+df_isoniazid_resi$total_cases <- as.numeric(gsub(",", "",
+                                                 df_isoniazid_resi$total_cases))
+
+df_isoniazid_resi$num_INH <- as.numeric(gsub(",", "", 
+                                             df_isoniazid_resi$num_INH))
+df_isoniazid_resi$no_prev_TB_num_INH. <- as.numeric(gsub(",", "",
+                                                         df_isoniazid_resi$no_prev_TB_num_INH.))
+
+df_isoniazid_history_cases_longer <- df_isoniazid_resi %>%
+  select(year, prev_TB_num_INH, no_prev_TB_num_INH.) %>%
+  pivot_longer(!year, names_to = "TB_history", values_to = "number_of_cases") 
+
+stacked_bar_chart_drug_resi <- ggplot(df_isoniazid_history_cases_longer, aes(year, number_of_cases, fill = TB_history)) +
+  geom_bar(stat = "identity") + 
+  scale_x_continuous(breaks = seq(min(df_drug_resi$year), max(df_drug_resi$year), 5)) +
+  theme_hc() +
+  scale_fill_manual(values = c("grey", "gold"), labels = c("No history of TB", "Has history of TB")) +
+  labs(x = "",
+       y = "Total cases per year",
+       fill = "TB history",
+       title = "Comparison of Isoniazid resistant cases by Tuberculosis history in US (1993-2021):\nTotal cases throughout years") +
+  theme(title = element_text(size = 9, face = "bold"))
+  
+line_chart_resi <- df_drug_resi %>%
+  select(year, perc_INH, perc_MDR) %>%
+  pivot_longer(!year, names_to = "cases_perc", values_to = "values") %>%
+  ggplot(aes(year, values, group = cases_perc, color = cases_perc)) +
+  geom_line()  +
+  theme_hc() +
+  scale_x_continuous(breaks = seq(min(df_drug_resi$year), max(df_drug_resi$year), 5)) +
+  scale_color_manual(values = c("red", "gold"), 
+                     labels = c("Isoniazid", "Multi-Drug")) +
+  scale_y_continuous(breaks = seq(1, 10, 1)) +
+  labs(x = "", 
+       y = "Percentage(%)", 
+       color = "Drug resistance",
+       title = "Comparison by type of drug resistance of Tuberculosis in US(1993-2021):\nPercentage of total cases") +
+  theme(title = element_text(size = 9, face = "bold"))
+
+line_chart_resi_no_prev <- df_drug_resi %>%
+  select(year, no_prev_TB_perc_INH, no_prev_TB_perc_MDR) %>%
+  pivot_longer(!year, names_to = "cases_perc", values_to = "values") %>%
+  ggplot(aes(year, values, group = cases_perc, color = cases_perc)) +
+  geom_line() +
+  theme_hc() +
+  scale_x_continuous(breaks = seq(min(df_drug_resi$year), max(df_drug_resi$year), 5)) +
+  scale_color_manual(values = c("red", "gold"), 
+                     labels = c("Isoniazid", "Multi-Drug")) +
+  scale_y_continuous(breaks = seq(1, 10, 1)) +
+  labs(x = "", 
+       y = "Percentage(%)", 
+       color = "Drug resistance",
+       title = "Comparison by type of drug resistance with no previous Tuberculosis history in US(1993-2021):\nPercentage of total cases") +
+  theme(title = element_text(size = 9, face = "bold"))
+```
+</details>
+
+## TB history
+```{r, echo=FALSE, fig.width=8}
+stacked_bar_chart_drug_resi
+```
+
+**Observations** 
+
+- The drug resistance to isoniazid is much more in cases with no history of TB, which is quite alarming. 
+
+## Drug resistance Comparison
+```{r, echo=FALSE, fig.width=8}
+line_chart_resi
+```
+
+**Observations**
+
+- 10% of all TB cases have drug resistance either to isoniazid or MDR throughout the years.
+
+## Drug resistance Comaprison with No previous TB
+
+```{r, echo=FALSE, fig.width=8}
+line_chart_resi_no_prev
+```
+
+**Observations**
+
+- Almost 10% of all cases with no previous TB history have drug resistance either to isoniazid or MDR throughout the years.
+
+# {-}
+
+**Insights** 
+
+- Drug Resistance in TB is a major concern in the US as 10% of cases with and without prior history of TB infection have developed drug resistance.
+- There are also cases of XDR TB caused by an organism that found to be resistant to almost all available treatment options of TB.
+- This analysis suggests that there is an urgent need for development of a new vaccine as the situation of drug resistance could get worse very quickly in coming years.
+
+# Discussion 
+
+**Cons**
+
+For more in depth report, the following analysis needs to be performed:
+- Risk factor analysis to determine what factors make people more susceptible to TB.
+- Economic Analysis to understand the economic burden of TB.
+- Although this study suggests that TB is a disease of under privileged, a more in depth analysis of occupation is needed.
+
+**Pros**
+
+- The data used in this analysis from CDC is appropriate in getting valuable insights on Tuberculosis in the US.
+- The demographic and drug resistance analysis suggests that a more targeted approach is needed to combat TB. Hence, new vaccine development is the way forward.
+
+# Conclusion 
+
+From all the insights that we have gathered from this study:
+- Low efficacy of BCG vaccine
+- Individualized vaccination approach 
+- Growing drug resistance against the anti-TB drugs
+
+The BCG vaccine is not efficient enough to help us combat the the deadly disease of Tuberculosis. The situation is becoming more alarming with growing drug resistance cases and emergence of XDR drug resistance. Our study suggest that more efficient vaccine is the way forward.
+
+# Literature
+
+https://www.who.int/news-room/fact-sheets/detail/tuberculosis
+
+https://www.thelancet.com/journals/langlo/article 
+
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5012571/
+
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5012571/
+
